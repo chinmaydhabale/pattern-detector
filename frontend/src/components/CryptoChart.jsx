@@ -202,7 +202,7 @@ const CryptoChart = () => {
           <CardContent>
             <div className="h-96">
               <ResponsiveContainer width="100%" height="100%">
-                <ComposedChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#e0e7ff" />
                   <XAxis 
                     dataKey="date" 
@@ -216,11 +216,39 @@ const CryptoChart = () => {
                     tickFormatter={(value) => `$${value}`}
                   />
                   <Tooltip content={<CustomTooltip />} />
-                  <Bar
-                    dataKey="close"
-                    shape={(props) => <CandlestickBar {...props} />}
+                  <Line 
+                    type="monotone" 
+                    dataKey="high" 
+                    stroke="#10b981" 
+                    strokeWidth={2}
+                    name="High"
+                    dot={false}
                   />
-                </ComposedChart>
+                  <Line 
+                    type="monotone" 
+                    dataKey="low" 
+                    stroke="#ef4444" 
+                    strokeWidth={2}
+                    name="Low"
+                    dot={false}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="close" 
+                    stroke="#3b82f6" 
+                    strokeWidth={3}
+                    name="Close"
+                    dot={false}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="open" 
+                    stroke="#8b5cf6" 
+                    strokeWidth={2}
+                    name="Open"
+                    dot={false}
+                  />
+                </LineChart>
               </ResponsiveContainer>
             </div>
           </CardContent>
