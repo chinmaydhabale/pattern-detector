@@ -16,41 +16,105 @@ const CryptoChart = () => {
   const [chartData, setChartData] = useState([]);
   const [detectedPatterns, setDetectedPatterns] = useState([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentPrice, setCurrentPrice] = useState(0);
+  const [priceChange24h, setPriceChange24h] = useState(0);
+  const [priceChangePercentage24h, setPriceChangePercentage24h] = useState(0);
+  const [supportedCryptos, setSupportedCryptos] = useState([
+    { symbol: 'BTC', name: 'Bitcoin' },
+    { symbol: 'ETH', name: 'Ethereum' },
+    { symbol: 'ADA', name: 'Cardano' },
+    { symbol: 'SOL', name: 'Solana' },
+  ]);
 
-  const cryptoOptions = [
-    { value: 'BTC', label: 'Bitcoin (BTC)' },
-    { value: 'ETH', label: 'Ethereum (ETH)' },
-    { value: 'ADA', label: 'Cardano (ADA)' },
-    { value: 'SOL', label: 'Solana (SOL)' },
-  ];
+  const { toast } = useToast();
 
   useEffect(() => {
-    loadCryptoData(selectedCrypto);
+    fetchSupportedCryptos();
+  }, []);
+
+  useEffect(() => {
+    if (selectedCrypto) {
+      analyzeCrypto(selectedCrypto);
+    }
   }, [selectedCrypto]);
 
-  const loadCryptoData = (crypto) => {
-    const data = mockCryptoData[crypto] || mockCryptoData.BTC;
-    setChartData(data);
-    analyzePatterns(data);
+  const fetchSupportedCryptos = async () => {
+    try {
+      const response = await axios.get(`${API}/crypto/supported`);
+      const cryptos = response.data.supported_cryptos.map(crypto => ({
+        symbol: crypto.symbol,
+        name: crypto.name
+      }));
+      setSupportedCryptos(cryptos);
+    } catch (error) {
+      console.error('Error fetching supported cryptos:', error);
+      // Keep default cryptos if API fails
+    }
   };
 
-  const analyzePatterns = async (data) => {
+  const analyzeCrypto = async (symbol, days = 30) => {
     setIsAnalyzing(true);
+    setIsLoading(true);
     
-    // Simulate analysis delay for better UX
-    setTimeout(() => {
-      const patterns = detectHeadAndShoulders(data);
-      setDetectedPatterns(patterns);
+    try {
+      const response = await axios.post(`${API}/crypto/analyze`, {
+        symbol: symbol,
+        days: days
+      });
+
+      const data = response.data;
+      
+      // Format data for the chart
+      const formattedData = data.data.map(item => ({
+        date: item.date,
+        open: item.open_price || item.open,
+        high: item.high_price || item.high,
+        low: item.low_price || item.low,
+        close: item.close_price || item.close,
+        volume: item.volume
+      }));
+
+      setChartData(formattedData);
+      setDetectedPatterns(data.patterns || []);
+      setCurrentPrice(data.current_price);
+      setPriceChange24h(data.price_change_24h);
+      setPriceChangePercentage24h(data.price_change_percentage_24h);
+
+      toast({
+        title: "Analysis Complete",
+        description: `Found ${data.patterns?.length || 0} Head & Shoulders patterns for ${symbol}`,
+        duration: 3000,
+      });
+
+    } catch (error) {
+      console.error('Error analyzing crypto:', error);
+      toast({
+        title: "Analysis Failed",
+        description: error.response?.data?.detail || "Failed to analyze cryptocurrency data",
+        variant: "destructive",
+        duration: 5000,
+      });
+      
+      // Clear data on error
+      setChartData([]);
+      setDetectedPatterns([]);
+      setCurrentPrice(0);
+      setPriceChange24h(0);
+      setPriceChangePercentage24h(0);
+    } finally {
       setIsAnalyzing(false);
-    }, 1500);
+      setIsLoading(false);
+    }
   };
 
   const formatPrice = (price) => {
+    if (price === 0) return '$0.00';
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
+      maximumFractionDigits: price < 1 ? 6 : 2
     }).format(price);
   };
 
