@@ -26,7 +26,7 @@ class CryptoData(BaseModel):
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
     class Config:
-        allow_population_by_field_name = True
+        populate_by_name = True
 
 
 class PatternDetection(BaseModel):
