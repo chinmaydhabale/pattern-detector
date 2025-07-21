@@ -208,3 +208,5 @@ test_plan:
 agent_communication:
   - agent: "main"
     message: "Completed full-stack crypto pattern detector with CoinGecko integration and Head & Shoulders detection. Backend successfully tested via curl showing real BTC data ($118,567 current price) with 7 detected patterns. Frontend shows proper loading states and integrates with backend APIs. Ready for comprehensive backend testing to verify all endpoints, error handling, and database operations."
+  - agent: "testing"
+    message: "COMPREHENSIVE BACKEND INTEGRATION TESTING COMPLETED. Frontend loads correctly and makes API requests to all backend endpoints. Backend is processing requests successfully (200 OK responses) and detecting 7 Head & Shoulders patterns. However, CoinGecko API rate limiting (429 errors) causes 61-second delays, leading to frontend timeouts. Backend falls back to mock data correctly. All core functionality is working - issue is performance-related due to external API limits, not implementation bugs."
