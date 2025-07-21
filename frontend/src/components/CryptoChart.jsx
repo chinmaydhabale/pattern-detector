@@ -135,11 +135,6 @@ const CryptoChart = () => {
     return null;
   };
 
-  const currentPrice = chartData.length > 0 ? chartData[chartData.length - 1].close : 0;
-  const previousPrice = chartData.length > 1 ? chartData[chartData.length - 2].close : 0;
-  const priceChange = currentPrice - previousPrice;
-  const priceChangePercent = previousPrice ? (priceChange / previousPrice) * 100 : 0;
-
   return (
     <div className="space-y-6 p-6 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
       <div className="max-w-7xl mx-auto">
@@ -148,6 +143,7 @@ const CryptoChart = () => {
             Crypto Pattern Detector
           </h1>
           <p className="text-lg text-gray-600">Advanced Head & Shoulders Pattern Analysis</p>
+          <p className="text-sm text-gray-500 mt-2">🔥 Real-time data from CoinGecko API</p>
         </div>
 
         {/* Controls */}
@@ -156,14 +152,14 @@ const CryptoChart = () => {
             <div className="flex flex-wrap items-center gap-4">
               <div className="flex items-center gap-2">
                 <Activity className="w-5 h-5 text-blue-600" />
-                <Select value={selectedCrypto} onValueChange={setSelectedCrypto}>
+                <Select value={selectedCrypto} onValueChange={setSelectedCrypto} disabled={isLoading}>
                   <SelectTrigger className="w-48">
                     <SelectValue placeholder="Select Cryptocurrency" />
                   </SelectTrigger>
                   <SelectContent>
-                    {cryptoOptions.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
+                    {supportedCryptos.map((crypto) => (
+                      <SelectItem key={crypto.symbol} value={crypto.symbol}>
+                        {crypto.name} ({crypto.symbol})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -171,11 +167,18 @@ const CryptoChart = () => {
               </div>
               
               <Button 
-                onClick={() => analyzePatterns(chartData)}
-                disabled={isAnalyzing}
+                onClick={() => analyzeCrypto(selectedCrypto)}
+                disabled={isAnalyzing || isLoading}
                 className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
               >
-                {isAnalyzing ? 'Analyzing...' : 'Detect Patterns'}
+                {isAnalyzing ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Analyzing...
+                  </>
+                ) : (
+                  'Refresh Analysis'
+                )}
               </Button>
             </div>
           </CardContent>
@@ -192,13 +195,13 @@ const CryptoChart = () => {
               <div className="text-center">
                 <h3 className="text-lg font-medium text-gray-600 mb-2">24h Change</h3>
                 <div className="flex items-center justify-center gap-2">
-                  {priceChange >= 0 ? (
+                  {priceChange24h >= 0 ? (
                     <TrendingUp className="w-5 h-5 text-green-600" />
                   ) : (
                     <TrendingDown className="w-5 h-5 text-red-600" />
                   )}
-                  <span className={`text-2xl font-bold ${priceChange >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                    {priceChange >= 0 ? '+' : ''}{formatPrice(priceChange)} ({priceChangePercent.toFixed(2)}%)
+                  <span className={`text-2xl font-bold ${priceChange24h >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {priceChange24h >= 0 ? '+' : ''}{formatPrice(Math.abs(priceChange24h))} ({priceChangePercentage24h.toFixed(2)}%)
                   </span>
                 </div>
               </div>
@@ -215,60 +218,77 @@ const CryptoChart = () => {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Activity className="w-5 h-5" />
-              {selectedCrypto} Candlestick Chart
+              {selectedCrypto} Price Chart {isLoading && <RefreshCw className="w-4 h-4 animate-spin ml-2" />}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="h-96">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e7ff" />
-                  <XAxis 
-                    dataKey="date" 
-                    stroke="#6b7280"
-                    tick={{ fontSize: 12 }}
-                  />
-                  <YAxis 
-                    domain={['dataMin - 50', 'dataMax + 50']}
-                    stroke="#6b7280"
-                    tick={{ fontSize: 12 }}
-                    tickFormatter={(value) => `$${value}`}
-                  />
-                  <Tooltip content={<CustomTooltip />} />
-                  <Line 
-                    type="monotone" 
-                    dataKey="high" 
-                    stroke="#10b981" 
-                    strokeWidth={2}
-                    name="High"
-                    dot={false}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="low" 
-                    stroke="#ef4444" 
-                    strokeWidth={2}
-                    name="Low"
-                    dot={false}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="close" 
-                    stroke="#3b82f6" 
-                    strokeWidth={3}
-                    name="Close"
-                    dot={false}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="open" 
-                    stroke="#8b5cf6" 
-                    strokeWidth={2}
-                    name="Open"
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              {isLoading ? (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <RefreshCw className="w-8 h-8 animate-spin mx-auto mb-4 text-blue-600" />
+                    <p className="text-gray-600">Loading crypto data...</p>
+                  </div>
+                </div>
+              ) : chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e0e7ff" />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#6b7280"
+                      tick={{ fontSize: 12 }}
+                    />
+                    <YAxis 
+                      domain={['dataMin - 50', 'dataMax + 50']}
+                      stroke="#6b7280"
+                      tick={{ fontSize: 12 }}
+                      tickFormatter={(value) => `$${value}`}
+                    />
+                    <Tooltip content={<CustomTooltip />} />
+                    <Line 
+                      type="monotone" 
+                      dataKey="high" 
+                      stroke="#10b981" 
+                      strokeWidth={2}
+                      name="High"
+                      dot={false}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="low" 
+                      stroke="#ef4444" 
+                      strokeWidth={2}
+                      name="Low"
+                      dot={false}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="close" 
+                      stroke="#3b82f6" 
+                      strokeWidth={3}
+                      name="Close"
+                      dot={false}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="open" 
+                      stroke="#8b5cf6" 
+                      strokeWidth={2}
+                      name="Open"
+                      dot={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex items-center justify-center h-full">
+                  <div className="text-center">
+                    <Activity className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-600">No chart data available</p>
+                    <p className="text-gray-500 text-sm">Select a cryptocurrency to view data</p>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -293,15 +313,15 @@ const CryptoChart = () => {
                   detectedPatterns.map((pattern, index) => (
                     <div key={index} className="p-4 border rounded-lg bg-gradient-to-r from-blue-50 to-purple-50">
                       <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-lg">Head & Shoulders Pattern</h4>
+                        <h4 className="font-semibold text-lg">{pattern.pattern_type}</h4>
                         <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                          {pattern.type}
+                          {pattern.signal}
                         </Badge>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
                           <span className="font-medium text-gray-600">Left Shoulder:</span>
-                          <p className="font-mono">{formatPrice(pattern.leftShoulder)}</p>
+                          <p className="font-mono">{formatPrice(pattern.left_shoulder)}</p>
                         </div>
                         <div>
                           <span className="font-medium text-gray-600">Head:</span>
@@ -309,7 +329,7 @@ const CryptoChart = () => {
                         </div>
                         <div>
                           <span className="font-medium text-gray-600">Right Shoulder:</span>
-                          <p className="font-mono">{formatPrice(pattern.rightShoulder)}</p>
+                          <p className="font-mono">{formatPrice(pattern.right_shoulder)}</p>
                         </div>
                         <div>
                           <span className="font-medium text-gray-600">Confidence:</span>
@@ -321,6 +341,9 @@ const CryptoChart = () => {
                           <strong>Signal:</strong> {pattern.signal} | 
                           <strong className="ml-2">Strength:</strong> {pattern.strength}
                         </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Detected at: {new Date(pattern.detected_at).toLocaleString()}
+                        </p>
                       </div>
                     </div>
                   ))
@@ -330,7 +353,7 @@ const CryptoChart = () => {
                       <Activity className="w-8 h-8 text-gray-400" />
                     </div>
                     <p className="text-gray-600 text-lg">No Head & Shoulders patterns detected</p>
-                    <p className="text-gray-500 text-sm mt-2">Try analyzing a different time period or cryptocurrency</p>
+                    <p className="text-gray-500 text-sm mt-2">Try analyzing a different cryptocurrency or time period</p>
                   </div>
                 )}
               </div>
