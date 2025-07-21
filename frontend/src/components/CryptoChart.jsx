@@ -4,57 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Button } from './ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Badge } from './ui/badge';
-import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
-import { detectHeadAndShoulders } from '../utils/patternDetector';
-import { mockCryptoData } from '../data/mockData';
+import { TrendingUp, TrendingDown, Activity, RefreshCw } from 'lucide-react';
+import { useToast } from '../hooks/use-toast';
+import axios from 'axios';
 
-const CandlestickBar = ({ payload, width }) => {
-  if (!payload) return null;
-  
-  const { open, close, high, low } = payload;
-  const isRising = close > open;
-  const color = isRising ? '#10b981' : '#ef4444';
-  const bodyHeight = Math.abs(close - open);
-  const wickTop = high - Math.max(open, close);
-  const wickBottom = Math.min(open, close) - low;
-  
-  const candleWidth = Math.max(width * 0.6, 2);
-  const wickWidth = 1;
-  
-  return (
-    <g>
-      {/* Upper wick */}
-      <line
-        x1={width / 2}
-        y1={0}
-        x2={width / 2}
-        y2={wickTop}
-        stroke={color}
-        strokeWidth={wickWidth}
-      />
-      
-      {/* Body */}
-      <rect
-        x={(width - candleWidth) / 2}
-        y={wickTop}
-        width={candleWidth}
-        height={bodyHeight || 1}
-        fill={color}
-        stroke={color}
-      />
-      
-      {/* Lower wick */}
-      <line
-        x1={width / 2}
-        y1={wickTop + bodyHeight}
-        x2={width / 2}
-        y2={wickTop + bodyHeight + wickBottom}
-        stroke={color}
-        strokeWidth={wickWidth}
-      />
-    </g>
-  );
-};
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
+const API = `${BACKEND_URL}/api`;
 
 const CryptoChart = () => {
   const [selectedCrypto, setSelectedCrypto] = useState('BTC');
